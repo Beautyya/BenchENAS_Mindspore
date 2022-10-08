@@ -1,0 +1,36 @@
+# Configurations
+data_path: "/cache/data"
+output_path: "/cache/train"
+load_path: "./checkpoint/NAS-BENCH-201/"
+device_target: NPU
+checkpoint_path: "./checkpoint/"
+run_distribute: False
+enable_profiling: False
+ckpt_path: './checkpoint/NAS-BENCH-201/'
+
+# ==============================================================================
+optimizer: SGD
+momentum: 0.9
+weight_decay: 0.0005
+epoch: 200
+lr: 0.1
+lr schedule: cosine
+save_checkpoint: True
+model_name: "PP"
+dataset_name: "CIFAR-10"
+batch_size: 256
+initial channel: 16
+V: 4
+N: 5
+random flip: 0.5
+random crop: True
+save_graphs: False
+normalization: True
+Nesterov: True
+---
+# Config description for each option
+data_path: 'Dataset path'
+output_path: 'Training output path'
+device_target: 'Target device type'
+enable_profiling: 'Whether enable profiling while training, default: False'
+---
