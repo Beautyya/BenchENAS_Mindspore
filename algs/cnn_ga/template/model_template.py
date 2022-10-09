@@ -25,7 +25,7 @@ class BasicBlock(nn.Cell):
                 nn.BatchNorm2d(self.expansion * planes)
             )
 
-    def forward(self, x):
+    def construct(self, x):
         out = F.ReLU(self.bn1(self.conv1(x)))
         out = self.bn2(self.conv2(out))
         out += self.shortcut(x)
@@ -38,7 +38,7 @@ class EvoCNNModel(nn.Cell):
         super(EvoCNNModel, self).__init__()
         # generate_init
 
-    def forward(self, x):
+    def construct(self, x):
         # generate_forward
 
         out = out.view(out.size(0), -1)
