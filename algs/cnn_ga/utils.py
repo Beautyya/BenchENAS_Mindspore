@@ -381,9 +381,9 @@ class Utils(object):
 
             else:
                 if u.max_or_avg < 0.5:
-                    _str = 'out_%d = nn.MaxPool2d(out_%d, 2)' % (i, i - 1)
+                    _str = 'out_%d = self.max_pool(out_%d)' % (i, i - 1)
                 else:
-                    _str = 'out_%d = nn.AvgPool2d(out_%d, 2)' % (i, i - 1)
+                    _str = 'out_%d = self.avg_pool(out_%d)' % (i, i - 1)
                 forward_list.append(_str)
         forward_list.append('out = out_%d' % (len(indi.units) - 1))
         # print('\n'.join(forward_list))
