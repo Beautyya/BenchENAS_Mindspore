@@ -117,6 +117,7 @@ class TrainModel(object):
         self.net.set_train()
         loss = 0.
         for batch, (data, label) in enumerate(self.trainloader.create_tuple_iterator()):
+            label = Tensor(label)
             loss = train_step(data, label)
 
         self.log_record('Train-Epoch:%3d,  Loss: %.3f' % (epoch + 1, loss))
@@ -126,6 +127,7 @@ class TrainModel(object):
         self.net.set_train(False)
         total, test_loss, correct = 0, 0, 0
         for data, label in self.validate_loader.create_tuple_iterator():
+            label = Tensor(label)
             pred = self.net(data)
             total += len(data)
             test_loss += self.criterion(pred, label).asnumpy()
