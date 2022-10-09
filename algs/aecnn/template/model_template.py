@@ -2,7 +2,6 @@
 from __future__ import print_function
 import mindspore
 import mindspore.nn as nn
-import mindspore.ops as F
 
 class ResNetBottleneck(nn.Cell):
     expansion = 1
@@ -11,6 +10,7 @@ class ResNetBottleneck(nn.Cell):
         super(ResNetBottleneck, self).__init__()
         self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=1, has_bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
+        self.relu = nn.ReLU()
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride, pad_mode='pad', padding=1, has_bias=False)
         self.bn2 = nn.BatchNorm2d(planes)
         self.conv3 = nn.Conv2d(planes, self.expansion*planes, kernel_size=1, has_bias=False)
@@ -23,12 +23,12 @@ class ResNetBottleneck(nn.Cell):
                 nn.BatchNorm2d(self.expansion*planes)
             )
 
-    def forward(self, x):
-        out = F.ReLU(self.bn1(self.conv1(x)))
-        out = F.ReLU(self.bn2(self.conv2(out)))
+    def construct(self, x):
+        out = self.relu(self.bn1(self.conv1(x)))
+        out = self.relu(self.bn2(self.conv2(out)))
         out = self.bn3(self.conv3(out))
         out += self.shortcut(x)
-        out = F.ReLU(out)
+        out = self.relu(out)
         return out
 
 class ResNetUnit(nn.Cell):
@@ -44,7 +44,7 @@ class ResNetUnit(nn.Cell):
             layers.append(block(self.in_planes, planes, stride))
             self.in_planes = planes * block.expansion
         return nn.SequentialCell(*layers)
-    def forward(self, x):
+    def construct(self, x):
         out = self.layer(x)
         return out
 
@@ -55,13 +55,14 @@ class DenseNetBottleneck(nn.Cell):
         self.bn1 = nn.BatchNorm2d(nChannels)
         self.conv1 = nn.Conv2d(nChannels, interChannels, kernel_size=1,
                                has_bias=False)
+        self.relu = nn.ReLU()
         self.bn2 = nn.BatchNorm2d(interChannels)
         self.conv2 = nn.Conv2d(interChannels, growthRate, kernel_size=3, pad_mode='pad',
                                padding=1, has_bias=False)
 
-    def forward(self, x):
-        out = self.conv1(F.ReLU(self.bn1(x)))
-        out = self.conv2(F.ReLU(self.bn2(out)))
+    def construct(self, x):
+        out = self.conv1(self.relu(self.bn1(x)))
+        out = self.conv2(self.relu(self.bn2(out)))
         out = mindspore.ops.Concat((x, out), 1)
         return out
 
@@ -74,7 +75,7 @@ class DenseNetUnit(nn.Cell):
             self.bn = nn.BatchNorm2d(in_channel)
             self.conv = nn.Conv2d(in_channel, max_input_channel, kernel_size=1, has_bias=False)
             in_channel = max_input_channel
-
+        self.relu = nn.ReLU
         self.layer = self._make_dense(in_channel, k, amount)
 
     def _make_dense(self, nChannels, growthRate, nDenseBlocks):
@@ -83,25 +84,27 @@ class DenseNetUnit(nn.Cell):
             layers.append(DenseNetBottleneck(nChannels, growthRate))
             nChannels += growthRate
         return nn.SequentialCell(*layers)
-    def forward(self, x):
+    def construct(self, x):
         out = x
         if hasattr(self, 'need_conv'):
-            out = self.conv(F.ReLU(self.bn(out)))
+            out = self.conv(self.relu(self.bn(out)))
         out = self.layer(out)
-        assert(out.size()[1] == self.out_channel)
+        assert(out.shape[1] == self.out_channel)
         return out
 
 
 class EvoCNNModel(nn.Cell):
     def __init__(self):
         super(EvoCNNModel, self).__init__()
-        #generated_init
+        self.max_pool = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.avg_pool = nn.MaxPool2d(kernel_size=2, stride=2)
+        # generate_init
 
 
-    def forward(self, x):
-        #generate_forward
+    def construct(self, x):
+        # generate_forward
 
-        out = out.view(out.size(0), -1)
+        out = out.view(out.shape[0], -1)
         out = self.linear(out)
         return out
 
