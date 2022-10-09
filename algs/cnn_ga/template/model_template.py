@@ -21,7 +21,7 @@ class BasicBlock(nn.Cell):
         self.shortcut = nn.SequentialCell()
         if stride != 1 or in_planes != self.expansion * planes:
             self.shortcut = nn.SequentialCell(
-                nn.Conv2d(in_planes, self.expansion * planes, kernel_size=1, stride=stride, bias=False),
+                nn.Conv2d(in_planes, self.expansion * planes, kernel_size=1, stride=stride, has_bias=False),
                 nn.BatchNorm2d(self.expansion * planes)
             )
 
