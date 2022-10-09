@@ -138,7 +138,7 @@ class CIFAR100(BaseDataloader):
         )
         valid_dataset = valid_data.dataset
 
-        num_train = train_dataset.get_batch_size()
+        num_train = train_dataset.get_dataset_size()
         indices = list(range(num_train))
         split = int(np.floor(valid_size * num_train))
 
