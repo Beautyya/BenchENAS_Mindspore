@@ -15,6 +15,7 @@ class BasicBlock(nn.Cell):
         super(BasicBlock, self).__init__()
         self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, stride=stride, pad_mode='pad', padding=1, has_bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
+        self.relu = nn.ReLU()
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, pad_mode='pad', padding=1, has_bias=False)
         self.bn2 = nn.BatchNorm2d(planes)
 
@@ -26,22 +27,24 @@ class BasicBlock(nn.Cell):
             )
 
     def construct(self, x):
-        out = F.ReLU(self.bn1(self.conv1(x)))
+        out = self.relu(self.bn1(self.conv1(x)))
         out = self.bn2(self.conv2(out))
         out += self.shortcut(x)
-        out = F.ReLU(out)
+        out = self.relu(out)
         return out
 
 
 class EvoCNNModel(nn.Cell):
     def __init__(self):
         super(EvoCNNModel, self).__init__()
+        self.max_pool = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.avg_pool = nn.MaxPool2d(kernel_size=2, stride=2)
         # generate_init
 
     def construct(self, x):
         # generate_forward
 
-        out = out.view(out.size(0), -1)
+        out = out.view(out.shape[0], -1)
         out = self.linear(out)
         return out
 
