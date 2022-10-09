@@ -326,13 +326,13 @@ class Utils(object):
         f = open(_path)
         f.readline()  # skip this comment
         line = f.readline().rstrip()
-        while line.strip() != '#generate_init':
+        while line.strip() != '# generate_init':
             part1.append(line)
             line = f.readline().rstrip()
         # print('\n'.join(part1))
 
         line = f.readline().rstrip()
-        while line.strip() != '#generate_forward':
+        while line.strip() != '# generate_forward':
             part2.append(line)
             line = f.readline().rstrip()
         # print('\n'.join(part2))
