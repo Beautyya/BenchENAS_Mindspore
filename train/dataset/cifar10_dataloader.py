@@ -22,7 +22,7 @@ class CIFAR10(BaseDataloader):
         self.out_cls_num = 10
 
     def get_train_dataloader(self):
-        if self.valid_size != 0:
+        if self.valid_size > 0:
             self.train_dataloader, self.val_dataloader = \
                 self.__get_train_valid_loader(self.root,
                                               self.batch_size,
@@ -163,7 +163,7 @@ class CIFAR10(BaseDataloader):
         valid_dataset = valid_dataset.repeat(repeat_num)
         train_dataset = train_dataset.repeat(repeat_num)
 
-        return (train_dataset, valid_dataset)
+        return train_dataset, valid_dataset
 
     def __get_train_loader(self,
                            data_dir,
