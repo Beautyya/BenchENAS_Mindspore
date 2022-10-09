@@ -190,13 +190,13 @@ class Utils(object):
         f = open(_path)
         f.readline()  # skip this comment
         line = f.readline().rstrip()
-        while line.strip() != '#generated_init':
+        while line.strip() != '# generate_init':
             part1.append(line)
             line = f.readline().rstrip()
         # print('\n'.join(part1))
 
         line = f.readline().rstrip()  # skip the comment '#generated_init'
-        while line.strip() != '#generate_forward':
+        while line.strip() != '# generate_forward':
             part2.append(line)
             line = f.readline().rstrip()
 
@@ -251,9 +251,9 @@ class Utils(object):
                 forward_list.append(_str)
             else:
                 if u.max_or_avg < 0.5:
-                    _str = 'out_%d = nn.MaxPool2d(out_%d, 2)' % (i, i - 1)
+                    _str = 'out_%d = self.max_pool(out_%d)' % (i, i - 1)
                 else:
-                    _str = 'out_%d = nn.AvgPool2d(out_%d, 2)' % (i, i - 1)
+                    _str = 'out_%d = self.avg_pool2d(out_%d)' % (i, i - 1)
                 forward_list.append(_str)
         forward_list.append('out = out_%d' % (len(indi.units) - 1))
         # print('\n'.join(forward_list))
