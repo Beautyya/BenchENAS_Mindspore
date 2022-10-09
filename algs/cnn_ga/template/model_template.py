@@ -18,9 +18,9 @@ class BasicBlock(nn.Cell):
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, pad_mode='pad', padding=1, has_bias=False)
         self.bn2 = nn.BatchNorm2d(planes)
 
-        self.shortcut = nn.SequentiaCell()
+        self.shortcut = nn.SequentialCell()
         if stride != 1 or in_planes != self.expansion * planes:
-            self.shortcut = nn.Sequential(
+            self.shortcut = nn.SequentialCell(
                 nn.Conv2d(in_planes, self.expansion * planes, kernel_size=1, stride=stride, bias=False),
                 nn.BatchNorm2d(self.expansion * planes)
             )
@@ -33,7 +33,7 @@ class BasicBlock(nn.Cell):
         return out
 
 
-class EvoCNNModel(nn.Module):
+class EvoCNNModel(nn.Cell):
     def __init__(self):
         super(EvoCNNModel, self).__init__()
         # generate_init
