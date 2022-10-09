@@ -65,8 +65,7 @@ class TrainConfig(object):
             dataloader_cls = Registry.DataLoaderRegistry.query(dataset)
             dataloader_cls_ins = dataloader_cls()
         else:
-            from train.dataset.comm_data import FDataLoader
-            dataloader_cls_ins = FDataLoader()
+            raise Exception(f'Dataset {dataset} is invalid')
         train_loader = dataloader_cls_ins.get_train_dataloader()
         valid_loader = dataloader_cls_ins.get_val_dataloader()
         test_loader = dataloader_cls_ins.get_test_dataloader()
@@ -89,8 +88,7 @@ class TrainConfig(object):
             dataloader_cls = Registry.DataLoaderRegistry.query(dataset)
             dataloader_cls_ins = dataloader_cls()
         else:
-            from train.dataset.comm_data import FDataLoader
-            dataloader_cls_ins = FDataLoader()
+            raise Exception(f'Dataset {dataset} is invalid')
         return dataloader_cls_ins.out_cls_num
 
     @staticmethod
@@ -103,6 +101,5 @@ class TrainConfig(object):
             dataloader_cls = Registry.DataLoaderRegistry.query(dataset)
             dataloader_cls_ins = dataloader_cls()
         else:
-            from train.dataset.comm_data import FDataLoader
-            dataloader_cls_ins = FDataLoader()
+            raise Exception(f'Dataset {dataset} is invalid')
         return dataloader_cls_ins.input_size
