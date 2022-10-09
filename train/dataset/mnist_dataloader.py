@@ -100,7 +100,7 @@ class MNIST(BaseDataloader):
         error_msg = "[!] valid_size should be in the range [0, 1]."
         assert ((valid_size >= 0) and (valid_size <= 1)), error_msg
 
-        normalize = vision.c_transforms.Normalize(
+        normalize = vision.py_transforms.Normalize(
             mean=[0.5, 0.5, 0.5],
             std=[0.5, 0.5, 0.5],
         )
@@ -188,7 +188,7 @@ class MNIST(BaseDataloader):
         -------
         - data_loader: main set iterator.
         """
-        normalize = vision.c_transforms.Normalize(
+        normalize = vision.py_transforms.Normalize(
             mean=[0.5, 0.5, 0.5],
             std=[0.5, 0.5, 0.5],
         )
@@ -237,7 +237,7 @@ class MNIST(BaseDataloader):
         -------
         - data_loader: main set iterator.
         """
-        normalize = vision.c_transforms.Normalize(
+        normalize = vision.py_transforms.Normalize(
             mean=[0.5, 0.5, 0.5],
             std=[0.5, 0.5, 0.5],
         )
