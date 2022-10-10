@@ -1,23 +1,54 @@
 # coding=utf-8
 from __future__ import print_function
-import sys
-import os
 
-import mindspore
-import traceback
-import mindspore.nn as nn
-import importlib, argparse
-from datetime import datetime
+import argparse
+import importlib
 import multiprocessing
+import os
+import sys
+import traceback
+from datetime import datetime
+
+import mindspore.nn as nn
+from mindspore import context, Model
+from mindspore.train.callback import Callback
+
 from algs.performance_pred.utils import TrainConfig
-
-from mindspore import context, Tensor, ops
-
 from comm.registry import Registry
+from compute.pid_manager import PIDManager
+from compute.redis import RedisLog
 from train.utils import OptimizerConfig, LRConfig
 
-from compute.redis import RedisLog
-from compute.pid_manager import PIDManager
+
+def log_record(logger, _str):
+    dt = datetime.now()
+    dt.strftime('%Y-%m-%d %H:%M:%S')
+    logger.info('[%s]-%s' % (dt, _str))
+
+
+class SaveEvalCallback(Callback):
+    def __init__(self, eval_function, eval_parameter_dict, epochs, logger):
+        self.eval_func = eval_function
+        self.eval_param = eval_parameter_dict
+        self.epoch = epochs
+        self.initial_epoch = 0
+        self.best_acc = 0.
+        self.logger = logger
+
+    def epoch_end(self, run_context):
+        # 保留每一个epoch后的结果
+        cb_params = run_context.original_args()
+        epoch_num = cb_params.cur_epoch_num
+        loss = cb_params.net_outputs
+
+        if epoch_num >= self.initial_epoch:
+            res = self.eval_func(self.eval_param)
+            log_record(self.logger, f'Epoch: train loss: {loss}, val acc: {res}')
+            if res > self.best_acc:
+                self.best_acc = res
+
+    def end(self, run_context):
+        log_record(self.logger, f'Finished Accuracy: {self.best_acc}')
 
 
 class TrainModel(object):
@@ -36,7 +67,6 @@ class TrainModel(object):
 
         # net = net.cuda()
         self.criterion = nn.SoftmaxCrossEntropyWithLogits(sparse=True, reduction='mean')
-        best_acc = 0.0
         self.net = net
 
         TrainConfig.ConfigTrainModel(self)
@@ -56,121 +86,62 @@ class TrainModel(object):
         self.lr_cls = lr_cls
         # after the initialization
 
-        self.best_acc = best_acc
-
         self.file_id = file_id
         self.logger = logger
 
-    def log_record(self, _str):
-        dt = datetime.now()
-        dt.strftime('%Y-%m-%d %H:%M:%S')
-        self.logger.info('[%s]-%s' % (dt, _str))
+    def apply_eval(self, eval_param):
+        eval_model = eval_param['model']
+        eval_ds = eval_param['dataset']
+        metrics_name = eval_param['metric']
+        res = eval_model.eval(eval_ds)
+        return res[metrics_name]
 
-    def get_optimizer(self, epoch):
+    def get_optimizer(self, epoch, lr):
         # get optimizer
         self.opt_params['current_epoch'] = epoch
         opt_cls_ins = self.opt_cls(**self.opt_params)
         optimizer = opt_cls_ins.get_optimizer(filter(lambda p: p.requires_grad, self.net.parameters()))
         return optimizer
 
-    def get_learning_rate(self, epoch):
-        step_per_epoch = self.trainloader.get_dataset_size()
-        min_lr = 0.
-        max_lr = self.lr_params['lr']
-        total_step = step_per_epoch * epoch
-        learning_rate = Tensor(
-            nn.cosine_decay_lr(max_lr=max_lr, min_lr=min_lr, total_step=total_step, step_per_epoch=step_per_epoch,
-                               decay_epoch=epoch))
-
-        return learning_rate
+    def get_learning_rate(self):
+        pass
 
     def process(self):
-        total_epoch = self.nepochs
-        scheduler = self.get_learning_rate(total_epoch)
-        self.optimizer = nn.SGD(
-            params=self.net.trainable_params(),
-            learning_rate=scheduler,
-            momentum=0.9,
-            weight_decay=0.0005,
-            nesterov=True
+        epoch_per_step = self.train_loader.get_dataset_size()
+        total_step = self.opt_params['total_epoch'] * epoch_per_step
+        lr = nn.CosineDecayLR(min_lr=0., max_lr=self.lr_params['lr'], decay_steps=total_step)
+        optim = nn.SGD(
+            params=self.net.trainable_params(), learning_rate=lr,
+            momentum=0.9, weight_decay=0.0005,
         )
-        for p in range(total_epoch):
-            self.train(p)
-            self.main(p)
-        return self.best_acc
+        model = Model(self.net, loss_fn=self.criterion, optimizer=optim, metrics={'accuracy'})
+        eval_param_dict = {'model': model, 'dataset': self.valid_loader, 'metric': 'accuracy'}
 
-    def train(self, epoch):
-        def forward_fn(img, labels):
-            logits = self.net(img)
-            losses = self.criterion(logits, labels)
-            return losses, logits
-
-        # Get gradient function
-        grad_fn = ops.value_and_grad(forward_fn, None, self.optimizer.parameters, has_aux=True)
-
-        # Define function of one-step training
-        def train_step(img, labels):
-            (losses, _), grads = grad_fn(img, labels)
-            losses = ops.depend(losses, self.optimizer(grads))
-            return losses
-
-        self.net.set_train()
-        loss = 0.
-        for batch, (data, label) in enumerate(self.trainloader.create_tuple_iterator()):
-            label = Tensor(label)
-            loss = train_step(data, label)
-
-        self.log_record('Train-Epoch:%3d,  Loss: %.3f' % (epoch + 1, loss))
-
-    def main(self, epoch):
-        num_batches = self.validate_loader.get_dataset_size()
-        self.net.set_train(False)
-        total, test_loss, correct = 0, 0, 0
-        for data, label in self.validate_loader.create_tuple_iterator():
-            label = Tensor(label)
-            pred = self.net(data)
-            total += len(data)
-            test_loss += self.criterion(pred, label).asnumpy()
-            correct += (pred.argmax(1) == label).asnumpy().sum()
-        test_loss /= num_batches
-        correct /= total
-        if correct > self.best_acc:
-            self.best_acc = correct
-        self.log_record(f"Test-Epoch:{epoch} Accuracy: {correct:>0.3f}, Avg loss: {test_loss:>8f}")
+        save_info = SaveEvalCallback(self.apply_eval, eval_param_dict, self.opt_params['total_epoch'], self.logger)
+        model.train(self.opt_params['total_epoch'], self.train_loader, callbacks=[save_info])
 
 
 class RunModel(object):
-
-    def log_record(self, _str):
-        dt = datetime.now()
-        dt.strftime('%Y-%m-%d %H:%M:%S')
-        self.logger.info('[%s]-%s' % (dt, _str))
-
     def do_work(self, gpu_id, file_id, uuid):
         os.environ['CUDA_VISIBLE_DEVICES'] = gpu_id
-        context.set_context(mode=context.PYNATIVE_MODE, device_target='Ascend')
+        # context.set_context(mode=context.PYNATIVE_MODE, device_target='Ascend')
         context.set_context(device_id=0)
         logger = RedisLog(os.path.basename(file_id) + '.txt')
         best_acc = 0.0
         try:
             m = TrainModel(file_id, logger)
-            m.log_record(
-                'Used GPU#%s, worker name:%s[%d]' % (gpu_id, multiprocessing.current_process().name, os.getpid()))
-            best_acc = m.process()
+            log_record(logger, 'Used GPU#%s, worker name:%s[%d]' % (
+                           gpu_id, multiprocessing.current_process().name, os.getpid()))
+            m.process()
         except BaseException as e:
             msg = traceback.format_exc()
-            print('Exception occurs, file:%s, pid:%d...%s' % (file_id, os.getpid(), str(e)))
-            print('%s' % (msg))
+            print(logger, 'Exception occurs, file:%s, pid:%d...%s' % (file_id, os.getpid(), str(e)))
+            print('%s' % msg)
             dt = datetime.now()
             dt.strftime('%Y-%m-%d %H:%M:%S')
-            _str = 'Exception occurs:%s' % (msg)
-            logger.info('[%s]-%s' % (dt, _str))
+            _str = f'Exception occurs:{msg}'
+            log_record(logger, '[%s]-%s' % (dt, _str))
         finally:
-            dt = datetime.now()
-            dt.strftime('%Y-%m-%d %H:%M:%S')
-            _str = 'Finished-Acc:%.3f' % best_acc
-            logger.info('[%s]-%s' % (dt, _str))
-
             logger.write_file('RESULTS', 'results.txt', '%s=%.5f\n' % (file_id, best_acc))
             _str = '%s;%.5f\n' % (uuid, best_acc)
             logger.write_file('CACHE', 'cache.txt', _str)
