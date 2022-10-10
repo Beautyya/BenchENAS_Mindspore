@@ -75,7 +75,7 @@ class TrainModel(object):
         opt_cls = Registry.OptimizerRegistry.query(o.read_ini_file('_name'))
         opt_params = {k: (v) for k, v in o.read_ini_file_all().items() if not k.startswith('_')}
         l = LRConfig()
-        lr_cls = Registry.LRRegistry.query(l.read_ini_file('lr_strategy'))
+        lr_cls = Registry.LRRegistry.query(l.read_ini_file('lr_schedule'))
         lr_params = {k: (v) for k, v in l.read_ini_file_all().items() if not k.startswith('_')}
         lr_params['lr'] = float(lr_params['lr'])
         opt_params['lr'] = float(lr_params['lr'])
@@ -96,24 +96,25 @@ class TrainModel(object):
         res = eval_model.eval(eval_ds)
         return res[metrics_name]
 
-    def get_optimizer(self, epoch, lr):
+        def get_optimizer(self, lr_schedule):
         # get optimizer
-        self.opt_params['current_epoch'] = epoch
+        self.opt_params['lr_schedule'] = lr_schedule
         opt_cls_ins = self.opt_cls(**self.opt_params)
-        optimizer = opt_cls_ins.get_optimizer(filter(lambda p: p.requires_grad, self.net.parameters()))
+        optimizer = opt_cls_ins.get_optimizer(self.net.trainable_params())  # 传参就是  params
         return optimizer
 
     def get_learning_rate(self):
-        pass
+        epoch_per_step = self.train_loader.get_dataset_size()
+        self.lr_params['total_step'] = self.opt_params['total_epoch'] * epoch_per_step
+        lr_cls_ins = self.lr_cls(**self.lr_params)
+        learning_rate = lr_cls_ins.get_learning_rate()
+        return learning_rate
 
     def process(self):
-        epoch_per_step = self.train_loader.get_dataset_size()
-        total_step = self.opt_params['total_epoch'] * epoch_per_step
-        lr = nn.CosineDecayLR(min_lr=0., max_lr=self.lr_params['lr'], decay_steps=total_step)
-        optim = nn.SGD(
-            params=self.net.trainable_params(), learning_rate=lr,
-            momentum=0.9, weight_decay=0.0005,
-        )
+        # epoch_per_step = self.train_loader.get_dataset_size()
+        # total_step = self.opt_params['total_epoch'] * epoch_per_step
+        lr = self.get_learning_rate()
+        optim = self.get_optimizer(lr)
         model = Model(self.net, loss_fn=self.criterion, optimizer=optim, metrics={'accuracy'})
         eval_param_dict = {'model': model, 'dataset': self.valid_loader, 'metric': 'accuracy'}
 
