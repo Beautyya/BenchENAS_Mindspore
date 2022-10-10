@@ -36,7 +36,6 @@ class SaveEvalCallback(Callback):
         self.logger = logger
 
     def epoch_end(self, run_context):
-        # 保留每一个epoch后的结果
         cb_params = run_context.original_args()
         epoch_num = cb_params.cur_epoch_num
         loss = cb_params.net_outputs
@@ -96,11 +95,11 @@ class TrainModel(object):
         res = eval_model.eval(eval_ds)
         return res[metrics_name]
 
-        def get_optimizer(self, lr_schedule):
+    def get_optimizer(self, lr_schedule):
         # get optimizer
         self.opt_params['lr_schedule'] = lr_schedule
         opt_cls_ins = self.opt_cls(**self.opt_params)
-        optimizer = opt_cls_ins.get_optimizer(self.net.trainable_params())  # 传参就是  params
+        optimizer = opt_cls_ins.get_optimizer(self.net.trainable_params())  
         return optimizer
 
     def get_learning_rate(self):
