@@ -1,4 +1,4 @@
-- The codes have been tested on Python 3.6 + pytorch 1.1 + torchvision 0.3.0 (pytorch 1.3 seems also ok, but not test thoroughly)
+- The codes have been tested on Python 3.7 + mindspore 1.7.1 + mindvision 0.1.0 (mindspore >= 1.5.3 seems also ok, but not test thoroughly)
 
 
 
