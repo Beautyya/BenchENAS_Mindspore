@@ -1,9 +1,0 @@
-[optimizer]
-_name=MySGD
-_batch_size=128
-_total_epoch=5
-lr=0.001
-
-
-[dataset]
-_name=CIFAR10
