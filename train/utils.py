@@ -74,9 +74,9 @@ class TrainConfig(object):
         trainModel.nepochs = int(o.read_ini_file('_total_epoch'))
         trainModel.lr = float(l.read_ini_file('lr'))
 
-        trainModel.trainloader = train_loader
+        trainModel.train_loader = train_loader
         trainModel.validate_loader = valid_loader
-        trainModel.testloader = test_loader
+        trainModel.test_loader = test_loader
 
     @staticmethod
     def get_out_cls_num():
