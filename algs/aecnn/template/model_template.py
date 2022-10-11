@@ -89,7 +89,7 @@ class DenseNetUnit(nn.Cell):
         if hasattr(self, 'need_conv'):
             out = self.conv(self.relu(self.bn(out)))
         out = self.layer(out)
-        assert(out.shape[1] == self.out_channel)
+        # assert(out.shape[1] == self.out_channel)
         return out
 
 
